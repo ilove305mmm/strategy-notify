@@ -5,9 +5,8 @@ from datetime import datetime
 from telegram import Bot
 import time
 
-# === 設定參數 ===
-TELEGRAM_TOKEN = "YOUR_TOKEN"
-TELEGRAM_CHAT_ID = "YOUR_CHAT_ID"
+TELEGRAM_TOKEN = "7832725484:AAFetGmUw2UWZmcgX46Im3llWuDHaARjPGA"
+TELEGRAM_CHAT_ID = "7574994738"
 SYMBOLS = ["BTCUSDT", "ETHUSDT"]
 INTERVAL = "15m"
 API_URL = "https://api.bybit.com/v5/market/kline"
@@ -43,7 +42,7 @@ def calculate_obv(df):
     return obv
 
 def analyze_obv_trend(obv_series):
-    return obv_series.diff().iloc[-5:].mean() > 0  # 最後5根平均斜率是否為正
+    return obv_series.diff().iloc[-5:].mean() > 0
 
 def estimate_cvd(df):
     delta = df["close"].diff()
@@ -53,7 +52,7 @@ def estimate_cvd(df):
     return cvd
 
 def analyze_cvd_direction(cvd_series):
-    return cvd_series.diff().iloc[-5:].mean() > 0  # 最後5根平均變化是否上升
+    return cvd_series.diff().iloc[-5:].mean() > 0
 
 def simulate_exit_advice(symbol, direction):
     if symbol == "BTCUSDT":
@@ -82,20 +81,18 @@ def send_notification(symbol, signal_type, price, vol_ok, obv_up, cvd_up):
     cvd_tag = "✅" if cvd_up else "❌"
     strategy = simulate_exit_advice(symbol, signal_type)
     direction = "多單" if signal_type == "long" else "空單"
-    message = f"""🔔 [{symbol}] {direction}訊號觸發
-• 價格突破關鍵位置：{price}
-
-📊 市場分析：
-• Volume：{"高於均量" if vol_ok else "低於均量"} {volume_tag}
-• CVD：{"多方優勢" if cvd_up else "空方優勢"} {cvd_tag}
-• OBV：{"上升趨勢" if obv_up else "下降趨勢"} {obv_tag}
-
-🎯 建議出場策略（{direction}）：
-{strategy}
-"""
+    message = (
+        f"🔔 [{symbol}] {direction}訊號觸發\n"
+        f"• 價格突破關鍵位置：{price}\n\n"
+        f"📊 市場分析：\n"
+        f"• Volume：{'高於均量' if vol_ok else '低於均量'} {volume_tag}\n"
+        f"• CVD：{'多方優勢' if cvd_up else '空方優勢'} {cvd_tag}\n"
+        f"• OBV：{'上升趨勢' if obv_up else '下降趨勢'} {obv_tag}\n\n"
+        f"🎯 建議出場策略（{direction}）：\n"
+        f"{strategy}"
+    )
     bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
 
-# === 主迴圈 ===
 while True:
     for symbol in SYMBOLS:
         try:
