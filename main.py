@@ -62,6 +62,16 @@ def simulate_exit_advice(symbol, direction):
 
 def check_breakout(df):
     recent = df.iloc[:-1]
+    last_red = recent[recent["close"] < recent["open"]]
+    last_green = recent[recent["close"] > recent["open"]]
+
+    if last_red.empty or last_green.empty:
+        return None, None
+
+    last_red = last_red.iloc[-1:]
+    last_green = last_green.iloc[-1:]
+
+    recent = df.iloc[:-1]
     last_red = recent[recent["close"] < recent["open"]].iloc[-1:] if not recent[recent["close"] < recent["open"]].empty else None
     last_green = recent[recent["close"] > recent["open"]].iloc[-1:] if not recent[recent["close"] > recent["open"]].empty else None
     close_5m = df.iloc[-1]["close"]
