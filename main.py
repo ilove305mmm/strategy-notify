@@ -13,6 +13,7 @@ API_URL = "https://api.bybit.com/v5/market/kline"
 VOLUME_LOOKBACK = 20
 
 bot = Bot(token=TELEGRAM_TOKEN)
+bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="✅ 策略系統啟動成功，測試通知已送出。")
 
 def fetch_kline(symbol, interval="15m", limit=200):
     params = {
@@ -61,16 +62,6 @@ def simulate_exit_advice(symbol, direction):
         return "1️⃣ +20點保本停損 ➜ 2️⃣ +40點啟動追蹤 ➜ 3️⃣ 回撤20點平倉 ➜ 4️⃣ 若虧損超過$30即止損"
 
 def check_breakout(df):
-    recent = df.iloc[:-1]
-    last_red = recent[recent["close"] < recent["open"]]
-    last_green = recent[recent["close"] > recent["open"]]
-
-    if last_red.empty or last_green.empty:
-        return None, None
-
-    last_red = last_red.iloc[-1:]
-    last_green = last_green.iloc[-1:]
-
     recent = df.iloc[:-1]
     last_red = recent[recent["close"] < recent["open"]].iloc[-1:] if not recent[recent["close"] < recent["open"]].empty else None
     last_green = recent[recent["close"] > recent["open"]].iloc[-1:] if not recent[recent["close"] > recent["open"]].empty else None
