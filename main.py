@@ -13,7 +13,7 @@ API_URL = "https://api.bybit.com/v5/market/kline"
 VOLUME_LOOKBACK = 20
 
 bot = Bot(token=TELEGRAM_TOKEN)
-bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="✅ 策略系統啟動成功，測試通知已送出。")
+bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="✅ Debug 模式啟動中，策略系統已開始執行。")
 
 def fetch_kline(symbol, interval="15m", limit=200):
     params = {
@@ -63,17 +63,27 @@ def simulate_exit_advice(symbol, direction):
 
 def check_breakout(df):
     recent = df.iloc[:-1]
-    last_red = recent[recent["close"] < recent["open"]].iloc[-1:] if not recent[recent["close"] < recent["open"]].empty else None
-    last_green = recent[recent["close"] > recent["open"]].iloc[-1:] if not recent[recent["close"] > recent["open"]].empty else None
+    last_red = recent[recent["close"] < recent["open"]]
+    last_green = recent[recent["close"] > recent["open"]]
+
+    if last_red.empty or last_green.empty:
+        print("⚠️ 找不到紅K或綠K，跳過判斷")
+        return None, None
+
+    last_red = last_red.iloc[-1:]
+    last_green = last_green.iloc[-1:]
+
     close_5m = df.iloc[-1]["close"]
     signal = None
     ref_price = None
-    if last_red is not None and close_5m > last_red["open"].values[0]:
+
+    if close_5m > last_red["open"].values[0]:
         signal = "long"
         ref_price = last_red["open"].values[0]
-    elif last_green is not None and close_5m < last_green["close"].values[0]:
+    elif close_5m < last_green["close"].values[0]:
         signal = "short"
         ref_price = last_green["close"].values[0]
+
     return signal, ref_price
 
 def send_notification(symbol, signal_type, price, vol_ok, obv_up, cvd_up):
@@ -92,20 +102,26 @@ def send_notification(symbol, signal_type, price, vol_ok, obv_up, cvd_up):
         f"🎯 建議出場策略（{direction}）：\n"
         f"{strategy}"
     )
-    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    try:
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    except Exception as e:
+        print(f"❌ 發送訊息失敗: {e}")
 
 while True:
     for symbol in SYMBOLS:
+        print(f"🔍 檢查幣種: {symbol}, 時間: {datetime.utcnow()}")
         try:
             df = fetch_kline(symbol)
+            print(f"📈 {symbol} 資料筆數: {len(df)}")
             calculate_obv(df)
             estimate_cvd(df)
             signal, ref = check_breakout(df)
+            print(f"📊 判斷結果 signal={signal}, ref={ref}")
             if signal:
                 vol_signal = analyze_volume(df)
                 obv_signal = analyze_obv_trend(df["obv"])
                 cvd_signal = analyze_cvd_direction(df["cvd"])
                 send_notification(symbol, signal, df.iloc[-1]["close"], vol_signal, obv_signal, cvd_signal)
         except Exception as e:
-            print(f"Error on {symbol}: {e}")
+            print(f"❌ {symbol} 發生錯誤: {e}")
     time.sleep(300)
